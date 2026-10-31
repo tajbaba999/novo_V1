@@ -1,5 +1,5 @@
 ---
-title: Nuvo-30M
+title: Nuvo-300M
 emoji: 🐣
 colorFrom: green
 colorTo: blue
@@ -10,12 +10,13 @@ pinned: false
 license: apache-2.0
 ---
 
-# Nuvo-30M
+# Nuvo-300M
 
-A 30M parameter language model, trained from scratch on TinyStories.
+A ~299M parameter language model, trained from scratch on 6B tokens and
+instruction-tuned on Stanford Alpaca.
 
 **Architecture:** GQA + RoPE + RMSNorm + SwiGLU, decoder-only transformer.
 
-**Training:** Modal A10G, 60k steps, AdamW + cosine schedule.
+**Training:** Modal H100, AdamW + cosine schedule, then Alpaca SFT.
 
 **Source:** [github.com/tajbaba999/nuvo_v1](https://github.com/tajbaba999/nuvo_v1)

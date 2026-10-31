@@ -1,57 +1,81 @@
-"""Tokenize a HF dataset into uint16 .bin shards."""
+"""Tokenize datasets into separate .bin files, then merge them."""
 
 from pathlib import Path
-
 import numpy as np
 from datasets import load_dataset
 from transformers import PreTrainedTokenizerFast
-
 from nuvo_v1.config import CONFIG
 
+MIX = [
+    {"id": "HuggingFaceFW/fineweb-edu",   "config": "sample-10BT", "tokens": 3_000_000_000, "name": "fineweb"},
+    {"id": "HuggingFaceTB/smollm-corpus", "config": "cosmopedia-v2", "tokens": 1_800_000_000, "name": "smollm"},
+    {"id": "wikimedia/wikipedia",         "config": "20231101.en", "tokens": 900_000_000, "name": "wiki"},
+    {"id": "open-web-math/open-web-math", "config": None, "tokens": 300_000_000, "name": "math"},
+]
 
-def tokenize_dataset(
-    dataset_name: str | None = None,
-    tokenizer_path: str | Path | None = None,
-    out_dir: str | Path | None = None,
-    num_proc: int | None = None,
-) -> None:
-    dataset_name = dataset_name or CONFIG.data.dataset_name
-    tokenizer_path = tokenizer_path or CONFIG.data.tokenizer_dir
-    out_dir = Path(out_dir or CONFIG.data.processed_dir)
-    num_proc = num_proc or CONFIG.data.num_proc
+def tokenize_dataset():
+    out_dir = Path(CONFIG.data.processed_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    tok = PreTrainedTokenizerFast.from_pretrained(str(tokenizer_path))
-    if len(tok) > 65535:
-        raise ValueError(f"vocab size {len(tok)} does not fit in uint16 (max 65535)")
+    tok = PreTrainedTokenizerFast.from_pretrained(str(CONFIG.data.tokenizer_dir))
+    if hasattr(tok, "add_bos_token"): tok.add_bos_token = False
     eos = tok.eos_token_id
-    print(f"Tokenizer: vocab={len(tok):,}, eos={eos}")
 
-    ds = load_dataset(dataset_name)
-    for split_src, split_out in [("train", "train"), ("validation", "val")]:
-        print(f"Tokenizing {split_src}...")
-        data = ds[split_src]
+    for spec in MIX:
+        out_path = out_dir / f"{spec['name']}.bin"
+        
+        # RESUME LOGIC: If file already exists and is large enough, skip it!
+        if out_path.exists() and out_path.stat().st_size > (spec['tokens'] * 1.8):
+            print(f"✓ {spec['name']}.bin already exists. Skipping.")
+            continue
 
-        def encode(ex):
-            ids = tok(ex["text"], add_special_tokens=False)["input_ids"]
-            ids.append(eos)
-            return {"ids": ids}
+        print(f"\n→ Processing {spec['name']} (target: {spec['tokens']/1e6:.0f}M tokens)")
+        kwargs = {"split": "train", "streaming": True}
+        if spec["config"]: kwargs["name"] = spec["config"]
+        
+        ds = load_dataset(spec["id"], **kwargs)
+        
+        # Write directly to disk in chunks to save RAM
+        with open(out_path, "wb") as f:
+            collected, running_total = [], 0
+            
+            for example in ds:
+                text = example.get("text", "")
+                if not text or not text.strip(): continue
+                ids = tok(text, add_special_tokens=False)["input_ids"]
+                ids.append(eos)
+                collected.append(np.array(ids, dtype=np.uint16))
+                running_total += len(ids)
+                
+                # Flush to disk every 5M tokens
+                if running_total % 5_000_000 < len(ids):
+                    np.concatenate(collected).tofile(f)
+                    collected = []
+                    print(f"   {running_total/1e6:.1f}M tokens...")
+                    
+                if running_total >= spec["tokens"]:
+                    break
+            
+            if collected:
+                np.concatenate(collected).tofile(f)
+                
+        print(f"✓ Saved {spec['name']}.bin")
 
-        tokenized = data.map(
-            encode,
-            remove_columns=data.column_names,
-            num_proc=num_proc,
-        )
-
-        all_ids = []
-        for row in tokenized["ids"]:
-            all_ids.extend(row)
-        arr = np.array(all_ids, dtype=np.uint16)
-
-        path = out_dir / f"{split_out}.bin"
-        arr.tofile(path)
-        print(f"  {path}: {len(arr) / 1e6:.2f}M tokens")
-
+    # ── MERGE & SHUFFLE ──
+    print("\nMerging and shuffling all datasets...")
+    shards = [np.memmap(out_dir / f"{s['name']}.bin", dtype=np.uint16, mode="r") for s in MIX]
+    combined = np.concatenate(shards)
+    
+    rng = np.random.default_rng(seed=42)
+    rng.shuffle(combined)
+    
+    n_total = len(combined)
+    n_test, n_val = int(n_total * 0.02), int(n_total * 0.02)
+    
+    combined[:n_test].tofile(out_dir / "test.bin")
+    combined[n_test:n_test+n_val].tofile(out_dir / "val.bin")
+    combined[n_test+n_val:].tofile(out_dir / "train.bin")
+    
+    print(f"✓ Final files saved! Total tokens: {n_total/1e6:.1f}M")
 
 if __name__ == "__main__":
     tokenize_dataset()

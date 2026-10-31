@@ -2,6 +2,7 @@
 
 import math
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import torch
@@ -39,6 +40,7 @@ def train(
     train_cfg: TrainConfig | None = None,
     use_wandb: bool = True,
     run_name: str | None = None,
+    on_save: Callable[[], None] | None = None,
 ) -> dict:
     model_cfg = model_cfg or CONFIG.model
     train_cfg = train_cfg or CONFIG.train
@@ -67,7 +69,7 @@ def train(
         train_ds,
         batch_size=train_cfg.batch_size,
         shuffle=True,
-        num_workers=2 if device.type == "cuda" else 0,
+        num_workers=train_cfg.num_workers if device.type == "cuda" else 0,
         pin_memory=device.type == "cuda",
         drop_last=True,
     )
@@ -106,6 +108,8 @@ def train(
     t0 = time.time()
     tokens_seen = 0
     step_loss = 0.0
+    log_steps = 0
+    accum_count = 0
     losses = []
 
     pbar = tqdm(total=train_cfg.max_steps, initial=step, desc="train")
@@ -134,26 +138,26 @@ def train(
             loss.backward()
             step_loss += loss.item() * train_cfg.grad_accum
             tokens_seen += x.numel()
+            accum_count += 1
+            log_steps += 1
 
-            if (step + 1) % train_cfg.grad_accum == 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), train_cfg.grad_clip)
-                opt.step()
-                opt.zero_grad(set_to_none=True)
+            if accum_count < train_cfg.grad_accum:
+                continue
 
-            if step % train_cfg.log_every == 0 and step > 0:
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                model.parameters(), train_cfg.grad_clip
+            ).item()
+            opt.step()
+            opt.zero_grad(set_to_none=True)
+            accum_count = 0
+            step += 1
+            pbar.update(1)
+
+            if step % train_cfg.log_every == 0:
                 dt = time.time() - t0
                 tok_s = tokens_seen / dt if dt > 0 else 0
-                avg_loss = step_loss / train_cfg.log_every
+                avg_loss = step_loss / log_steps
                 losses.append(avg_loss)
-
-                grad_norm = (
-                    sum(
-                        p.grad.detach().data.norm(2).item() ** 2
-                        for p in model.parameters()
-                        if p.grad is not None
-                    )
-                    ** 0.5
-                )
 
                 print(
                     f"step {step:6d} | loss {avg_loss:.4f} "
@@ -172,10 +176,11 @@ def train(
                 )
 
                 step_loss = 0.0
+                log_steps = 0
                 t0 = time.time()
                 tokens_seen = 0
 
-            if step > 0 and step % train_cfg.eval_every == 0:
+            if step % train_cfg.eval_every == 0:
                 val_loss = evaluate(model, val_loader, device, use_bf16)
                 ppl = math.exp(min(val_loss, 20))
                 print(f"  [eval] step {step} | val_loss {val_loss:.4f} | ppl {ppl:.2f}")
@@ -188,16 +193,19 @@ def train(
                 if val_loss < best_val:
                     best_val = val_loss
                     save_checkpoint(out / "best.pt", model, opt, step, best_val)
+                    if on_save is not None:
+                        on_save()
                     print("  -> saved best")
 
-            if step > 0 and step % train_cfg.save_every == 0:
+            if step % train_cfg.save_every == 0:
                 save_checkpoint(out / "last.pt", model, opt, step, best_val)
-
-            step += 1
-            pbar.update(1)
+                if on_save is not None:
+                    on_save()
 
     pbar.close()
     save_checkpoint(out / "final.pt", model, opt, step, best_val)
+    if on_save is not None:
+        on_save()
     print(f"Done. best val_loss={best_val:.4f}")
 
     if wandb_run is not None:

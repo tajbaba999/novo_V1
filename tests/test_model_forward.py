@@ -25,4 +25,4 @@ def test_param_count():
     model = Nuvo(ModelConfig())
     n = model.num_params()
     print(f"params: {n / 1e6:.2f}M")
-    assert 40e6 < n < 60e6
+    assert 290e6 < n < 310e6
