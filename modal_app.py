@@ -102,16 +102,18 @@ def _setup_local_ssd(pretrain=False, sft=False, test=False):
     secrets=[hf_secret],
 )
 def tokenize():
-    CONFIG = _setup()
+    import os, sys
+    sys.path.insert(0, "/root/nuvo/src")
+    os.chdir("/root/nuvo")
+
+    from nuvo_v1.config import CONFIG
     from nuvo_v1.data.tokenize import tokenize_dataset
 
-    tokenize_dataset(
-        tokenizer_path=CONFIG.data.tokenizer_dir,
-        out_dir=CONFIG.data.processed_dir,
-        temp_dir="/tmp/nuvo_tokenize",
-    )
-    volume.commit()
-    return "tokenization complete"
+    CONFIG.data.tokenizer_dir = "/root/nuvo/data/tokenizer"
+    CONFIG.data.processed_dir = "/root/nuvo/data/processed"
+
+    tokenize_dataset()
+    volume.commit()         
 
 
 @app.function(
