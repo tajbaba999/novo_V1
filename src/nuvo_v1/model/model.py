@@ -20,7 +20,8 @@ class Nuvo(nn.Module):
         if cfg.tie_embeddings:
             self.lm_head.weight = self.embed.weight
 
-        cos, sin = compute_rope_params(cfg.head_dim, cfg.rope_theta, cfg.max_seq_len)
+        head_dim = cfg.head_dim or cfg.d_model // cfg.n_heads
+        cos, sin = compute_rope_params(head_dim, cfg.rope_theta, cfg.max_seq_len)
         self.register_buffer("cos", cos, persistent=False)
         self.register_buffer("sin", sin, persistent=False)
 
