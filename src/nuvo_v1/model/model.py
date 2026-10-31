@@ -1,19 +1,23 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 from nuvo_v1.config import ModelConfig
+
 from .block import TransformerBlock
 from .kv_cache import KVCache
 from .rmsnorm import RMSNorm
 from .rope import compute_rope_params
+
 
 class Nuvo(nn.Module):
     def __init__(self, cfg: ModelConfig):
         super().__init__()
         self.cfg = cfg
         self.embed = nn.Embedding(cfg.vocab_size, cfg.d_model)
-        self.blocks = nn.ModuleList([TransformerBlock(cfg) for _ in range(cfg.n_layers)])
+        self.blocks = nn.ModuleList(
+            [TransformerBlock(cfg) for _ in range(cfg.n_layers)]
+        )
         self.norm_f = RMSNorm(cfg.d_model, cfg.norm_eps)
         self.lm_head = nn.Linear(cfg.d_model, cfg.vocab_size, bias=False)
 
@@ -28,9 +32,7 @@ class Nuvo(nn.Module):
         self.apply(self._init)
 
     def _init(self, m: nn.Module) -> None:
-        if isinstance(m, nn.Linear):
-            nn.init.normal_(m.weight, std=0.02)
-        elif isinstance(m, nn.Embedding):
+        if isinstance(m, (nn.Linear, nn.Embedding)):
             nn.init.normal_(m.weight, std=0.02)
 
     def forward(

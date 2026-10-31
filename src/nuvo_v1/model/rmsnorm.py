@@ -18,5 +18,3 @@ class RMSNorm(nn.Module):
         if self.shift is not None:
             norm_x = norm_x + self.shift
         return norm_x.to(input_dtype)
-
-    

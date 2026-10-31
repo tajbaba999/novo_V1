@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-#Modal
+# Modal
 @dataclass
 class ModelConfig:
     vocab_size: int = 32000
@@ -17,6 +17,7 @@ class ModelConfig:
     norm_eps: float = 1e-5
     qk_norm: bool = True
     tie_embeddings: bool = True
+
 
 #  DATA
 @dataclass
@@ -44,12 +45,14 @@ class TrainConfig:
     log_every: int = 20
     eval_every: int = 1000
     save_every: int = 2000
-    device: str = "auto"           # "auto" | "cpu" | "cuda"
+    device: str = "auto"  # "auto" | "cpu" | "cuda"
     seed: int = 42
     out_dir: Path = Path("checkpoints/nuvo-30m")
-    resume: bool = True            
+    resume: bool = True
+
 
 #  GENERATION
+
 
 @dataclass
 class GenerationConfig:
@@ -57,6 +60,7 @@ class GenerationConfig:
     temperature: float = 0.8
     top_k: int = 50
     top_p: float = 0.95
+
 
 #  HUGGING FACE
 @dataclass
@@ -76,4 +80,4 @@ class Config:
     hf: HFConfig = field(default_factory=HFConfig)
 
 
-CONFIG = Config() 
+CONFIG = Config()

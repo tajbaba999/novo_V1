@@ -10,10 +10,12 @@ def compute_rope_params(
     """Return (cos, sin) each of shape [max_seq_len, head_dim]."""
     assert head_dim % 2 == 0, "head_dim must be even"
 
-    inv_freq = 1.0 / (theta_base ** (torch.arange(0, head_dim, 2, dtype=dtype) / head_dim))
+    inv_freq = 1.0 / (
+        theta_base ** (torch.arange(0, head_dim, 2, dtype=dtype) / head_dim)
+    )
     positions = torch.arange(max_seq_len, dtype=dtype)
-    angles = positions.unsqueeze(1) * inv_freq.unsqueeze(0)   # [seq, head_dim//2]
-    angles = torch.cat([angles, angles], dim=1)                # [seq, head_dim]
+    angles = positions.unsqueeze(1) * inv_freq.unsqueeze(0)  # [seq, head_dim//2]
+    angles = torch.cat([angles, angles], dim=1)  # [seq, head_dim]
 
     return torch.cos(angles), torch.sin(angles)
 
@@ -38,7 +40,7 @@ def apply_rope(
     x1 = x[..., : D // 2]
     x2 = x[..., D // 2 :]
 
-    cos = cos[offset : offset + T].unsqueeze(0).unsqueeze(0)   # [1, 1, T, D]
+    cos = cos[offset : offset + T].unsqueeze(0).unsqueeze(0)  # [1, 1, T, D]
     sin = sin[offset : offset + T].unsqueeze(0).unsqueeze(0)
 
     rotated = torch.cat([-x2, x1], dim=-1)
