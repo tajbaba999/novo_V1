@@ -9,6 +9,7 @@ class ModalConfig:
     d_model: int = 512
     n_layers: int = 12
     n_heads: int = 8
+    n_kv_heads: int = 4
     head_dim: int | None = None
     ffn_head: int = 1408
     max_seq_len: int = 512
