@@ -1,0 +1,6 @@
+torch
+transformers
+huggingface_hub
+safetensors
+gradio
+nuvo-v1 @ git+https://github.com/tajbaba999/nuvo_v1.git
