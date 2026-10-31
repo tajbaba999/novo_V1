@@ -1,12 +1,13 @@
 import torch
-import torch.nn as nn
+from torch import nn
+
 
 class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps : float = 1e-6, bais: bool = False):
+    def __init__(self, dim: int, eps: float = 1e-6, bias: bool = False):
         super().__init__()
         self.eps = eps
         self.scale = nn.Parameter(torch.ones(dim))
-        self.shift = nn.Parameter(torch.zeros(dim)) if bais else None
+        self.shift = nn.Parameter(torch.zeros(dim)) if bias else None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         input_dtype = x.dtype

@@ -31,8 +31,9 @@ def apply_rope(
         cos, sin: [max_seq, head_dim]
         offset:   starting position (for KV-cache decoding)
     """
-    B, H, T, D = x.shape
+    T, D = x.shape[-2:]
     assert D % 2 == 0, "head_dim must be even"
+    assert offset + T <= cos.shape[0], "position exceeds RoPE table length"
 
     x1 = x[..., : D // 2]
     x2 = x[..., D // 2 :]
