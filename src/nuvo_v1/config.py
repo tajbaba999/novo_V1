@@ -14,7 +14,7 @@ class ModelConfig:
     ffn_hidden: int = 1408
     max_seq_len: int = 512
     rope_theta: float = 10000.0
-    norm_eps: float = 1e-5 
+    norm_eps: float = 1e-5
     qk_norm: bool = True
     tie_embeddings: bool = True
 
@@ -25,7 +25,7 @@ class DataConfig:
     vocab_size: int = 32000
     num_proc: int = 8
 
-    tokenizer_path: Path = Path("data/tokenizer")
+    tokenizer_dir: Path = Path("data/tokenizer")
     processed_dir: Path = Path("data/processed")
     train_bin: Path = Path("data/processed/train.bin")
     val_bin: Path = Path("data/processed/val.bin")
