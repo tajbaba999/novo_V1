@@ -40,7 +40,6 @@ class Nuvo(nn.Module):
         cache: KVCache | None = None,
         start_pos: int = 0,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
-        B, T = idx.shape
         x = self.embed(idx)
 
         for i, block in enumerate(self.blocks):
@@ -55,8 +54,8 @@ class Nuvo(nn.Module):
         loss = None
         if targets is not None:
             loss = F.cross_entropy(
-                logits[:, :-1].reshape(-1, logits.size(-1)),
-                targets[:, 1:].reshape(-1),
+                logits.reshape(-1, logits.size(-1)),
+                targets.reshape(-1),
             )
 
         return logits, loss
