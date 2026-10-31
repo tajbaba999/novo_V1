@@ -4,14 +4,14 @@ from pathlib import Path
 
 #Modal
 @dataclass
-class ModalConfig:
+class ModelConfig:
     vocab_size: int = 32000
     d_model: int = 512
     n_layers: int = 12
     n_heads: int = 8
     n_kv_heads: int = 4
     head_dim: int | None = None
-    ffn_head: int = 1408
+    ffn_hidden: int = 1408
     max_seq_len: int = 512
     rope_theta: float = 10000.0
     norm_eps: float = 1e-5 
@@ -69,7 +69,7 @@ class HFConfig:
 @dataclass
 class Config:
     project_name: str = "nuvo-v1"
-    model: ModalConfig = field(default_factory=ModalConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
     data: DataConfig = field(default_factory=DataConfig)
     train: TrainConfig = field(default_factory=TrainConfig)
     generation: GenerationConfig = field(default_factory=GenerationConfig)
