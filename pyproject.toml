@@ -1,0 +1,31 @@
+[project]
+name = "nuvo-v1"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "tajbaba999", email = "tajbaba153@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate>=1.15.0",
+    "datasets>=5.1.0",
+    "einops>=0.8.2",
+    "gradio>=6.31.0",
+    "huggingface-hub>=2.4.0",
+    "modal>=1.6.3",
+    "numpy>=2.5.4",
+    "pyyaml>=6.0.3",
+    "tokenizers>=0.23.3",
+    "torch>=2.15.0",
+    "tqdm>=4.70.1",
+    "transformers>=5.22.1",
+    "wandb>=0.31.0",
+]
+
+[project.scripts]
+nuvo-v1 = "nuvo_v1:main"
+
+[build-system]
+requires = ["uv_build>=0.11.29,<0.12.0"]
+build-backend = "uv_build"
