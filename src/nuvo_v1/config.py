@@ -48,7 +48,7 @@ class TrainConfig:
     grad_accum: int = 8
     lr: float = 4e-4
     warmup_steps: int = 1000
-    max_steps: int = 22900
+    max_steps: int = 11500
     weight_decay: float = 0.1
     grad_clip: float = 1.0
     log_every: int = 20
